@@ -40,7 +40,7 @@ class PrometheusHealthHandler(BaseHTTPRequestHandler):
 
 def start_metrics_server() -> None:
     """Start HTTP server on port 9090 serving /health and /metrics."""
-    server = HTTPServer(("0.0.0.0", 9090), PrometheusHealthHandler)
+    server = HTTPServer(("127.0.0.1", 9090), PrometheusHealthHandler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     logger.info("Prometheus+Health HTTP server started on port 9090")
