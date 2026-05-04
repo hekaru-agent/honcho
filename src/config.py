@@ -1280,11 +1280,15 @@ class AppSettings(HonchoSettings):
         if "NAMESPACE" not in self.METRICS.model_fields_set:
             self.METRICS.NAMESPACE = self.NAMESPACE
 
-        if self.EMBEDDING.VECTOR_DIMENSIONS != 1536 and (
-            self.VECTOR_STORE.TYPE == "pgvector" or not self.VECTOR_STORE.MIGRATED
+        # NOTE: Upstream hardcodes 1536 check here, restricting pgvector to 1536-dim.
+        # Hekaru deployment uses 768-dim embeddings with pgvector (baai/bge-base-en-v1.5).
+        # Patched to allow 768 as valid until pgvector schema migration is complete.
+        if (
+            self.EMBEDDING.VECTOR_DIMENSIONS not in (1536, 768)
+            and (self.VECTOR_STORE.TYPE == "pgvector" or not self.VECTOR_STORE.MIGRATED)
         ):
             raise ValueError(
-                "EMBEDDING.VECTOR_DIMENSIONS must remain 1536 while pgvector is "
+                "EMBEDDING.VECTOR_DIMENSIONS must be 1536 or 768 while pgvector is "
                 + "active or vector-store migration is incomplete"
             )
 
