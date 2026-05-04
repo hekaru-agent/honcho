@@ -21,6 +21,7 @@ from src.telemetry.events import (
     emit,
 )
 from src.telemetry.logging import log_performance_metrics
+from src.telemetry.prometheus.metrics import prometheus_metrics
 from src.utils import summarizer
 from src.utils.queue_payload import (
     DeletionPayload,
@@ -351,6 +352,15 @@ async def process_reconciler(payload: ReconcilerPayload) -> None:
                     message_embeddings_failed=metrics.message_embeddings_failed,
                     total_duration_ms=duration_ms,
                 )
+            )
+
+            # Record to Prometheus metrics
+            duration_sec = duration_ms / 1000
+            prometheus_metrics.record_message_embeddings_sync(
+                synced=metrics.message_embeddings_synced,
+                failed=metrics.message_embeddings_failed,
+                workspace_name="default",
+                duration_seconds=duration_sec,
             )
 
     elif reconciler_type == ReconcilerType.CLEANUP_QUEUE:

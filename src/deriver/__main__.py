@@ -1,9 +1,12 @@
 import asyncio
+import json
 import logging
 import os
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import uvloop
-from prometheus_client import start_http_server
+from prometheus_client import REGISTRY, generate_latest
 
 from src.config import settings
 from src.telemetry import initialize_telemetry_async, shutdown_telemetry
@@ -13,10 +16,34 @@ from .queue_manager import main
 logger = logging.getLogger(__name__)
 
 
+class PrometheusHealthHandler(BaseHTTPRequestHandler):
+    """HTTP handler serving both /health (JSON) and /metrics (Prometheus)."""
+
+    def do_GET(self):
+        if self.path == "/health":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "ok"}).encode())
+        else:
+            # Fall through to Prometheus metrics for all other paths
+            output = generate_latest(REGISTRY)
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; version=0.0.4")
+            self.end_headers()
+            self.wfile.write(output)
+
+    def log_message(self, format, *args):
+        # Suppress default HTTP logging to avoid noise
+        return
+
+
 def start_metrics_server() -> None:
-    """Start the Prometheus metrics HTTP server on port 9090."""
-    start_http_server(9090)
-    logger.info("Prometheus metrics server started on port 9090")
+    """Start HTTP server on port 9090 serving /health and /metrics."""
+    server = HTTPServer(("0.0.0.0", 9090), PrometheusHealthHandler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    logger.info("Prometheus+Health HTTP server started on port 9090")
 
 
 def setup_logging():

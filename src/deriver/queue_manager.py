@@ -444,6 +444,21 @@ class QueueManager:
             f"Error {context} for work unit {work_unit_key}: {error}",
             exc_info=True,
         )
+
+        # Record failure metric so we can track error rate in Prometheus
+        work_unit = parse_work_unit_key(work_unit_key)
+        if (
+            work_unit.task_type in ["representation", "summary"]
+            and work_unit.workspace_name is not None
+            and settings.METRICS.ENABLED
+        ):
+            prometheus_metrics.record_deriver_queue_item(
+                count=1,
+                workspace_name=work_unit.workspace_name,
+                task_type=work_unit.task_type,
+                status="error",
+            )
+
         if settings.SENTRY.ENABLED:
             sentry_sdk.capture_exception(error)
 
@@ -812,6 +827,7 @@ class QueueManager:
                     count=len(items),
                     workspace_name=work_unit.workspace_name,
                     task_type=work_unit.task_type,
+                    status="success",
                 )
 
     async def mark_queue_item_as_errored(

@@ -177,27 +177,22 @@ async def process_representation_tasks_batch(
             latest_message.workspace_name,
             latest_message.session_name,
         )
-    else:
-        # Save to all observer collections
-        for observer in observers:
-            representation_manager = RepresentationManager(
-                workspace_name=latest_message.workspace_name,
-                observer=observer,
-                observed=observed,
-            )
+        return
 
-            try:
-                await representation_manager.save_representation(
-                    observations,
-                    message_ids,
-                    latest_message.session_name,
-                    latest_message.created_at,
-                    message_level_configuration,
-                )
-            except Exception as e:
-                logger.error(
-                    "Failed to save representation for observer %s: %s", observer, e
-                )
+    # Save to all observer collections
+    for observer in observers:
+        representation_manager = RepresentationManager(
+            workspace_name=latest_message.workspace_name,
+            observer=observer,
+            observed=observed,
+        )
+        await representation_manager.save_representation(
+            observations,
+            message_ids,
+            latest_message.session_name,
+            latest_message.created_at,
+            message_level_configuration,
+        )
 
     # Log metrics
     overall_duration = (time.perf_counter() - overall_start) * 1000

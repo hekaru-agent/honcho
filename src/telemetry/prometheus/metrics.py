@@ -12,6 +12,7 @@ from prometheus_client import (
     Counter,
     disable_created_metrics,
     generate_latest,
+    Histogram,
 )
 from starlette.requests import Request
 from starlette.responses import Response
@@ -71,7 +72,7 @@ dialectic_calls_counter = NamespacedCounter(
 deriver_queue_items_processed_counter = NamespacedCounter(
     "deriver_queue_items_processed",
     "Total deriver queue items processed",
-    ["namespace", "workspace_name", "task_type"],
+    ["namespace", "workspace_name", "task_type", "status"],
 )
 
 deriver_tokens_processed_counter = NamespacedCounter(
@@ -90,6 +91,24 @@ dreamer_tokens_processed_counter = NamespacedCounter(
     "dreamer_tokens_processed",
     "Total tokens processed by the dreamer",
     ["namespace", "specialist_name", "token_type"],
+)
+
+message_embeddings_sync_counter = NamespacedCounter(
+    "message_embeddings_sync",
+    "Total message embeddings sync attempts",
+    ["namespace", "workspace_name", "status"],
+)
+
+message_embeddings_sync_duration_seconds = Histogram(
+    "message_embeddings_sync_duration_seconds",
+    "Time spent syncing message embeddings per batch",
+    ["namespace", "workspace_name"],
+)
+
+embedding_insert_counter = NamespacedCounter(
+    "embedding_insert",
+    "Total embedding insert attempts to postgres",
+    ["namespace", "workspace_name", "status"],
 )
 
 
@@ -159,11 +178,13 @@ class PrometheusMetrics:
         count: int,
         workspace_name: str,
         task_type: str,
+        status: str = "success",
     ) -> None:
         try:
             deriver_queue_items_processed_counter.labels(
                 workspace_name=workspace_name,
                 task_type=task_type,
+                status=status,
             ).inc(count)
         except Exception as e:
             self._handle_metric_error("record_deriver_queue_item", e)
@@ -216,6 +237,48 @@ class PrometheusMetrics:
             ).inc(count)
         except Exception as e:
             self._handle_metric_error("record_dreamer_tokens", e)
+
+    def record_message_embeddings_sync(
+        self,
+        *,
+        synced: int,
+        failed: int,
+        workspace_name: str,
+        duration_seconds: float | None = None,
+    ) -> None:
+        try:
+            if synced > 0:
+                message_embeddings_sync_counter.labels(
+                    workspace_name=workspace_name,
+                    status="synced",
+                ).inc(synced)
+            if failed > 0:
+                message_embeddings_sync_counter.labels(
+                    workspace_name=workspace_name,
+                    status="failed",
+                ).inc(failed)
+            if duration_seconds is not None:
+                message_embeddings_sync_duration_seconds.labels(
+                    workspace_name=workspace_name,
+                ).observe(duration_seconds)
+        except Exception as e:
+            self._handle_metric_error("record_message_embeddings_sync", e)
+
+    def record_embedding_insert(
+        self,
+        *,
+        count: int,
+        workspace_name: str,
+        status: str,
+    ) -> None:
+        """Record embedding insert attempts to postgres. status: 'success' or 'failed'."""
+        try:
+            embedding_insert_counter.labels(
+                workspace_name=workspace_name,
+                status=status,
+            ).inc(count)
+        except Exception as e:
+            self._handle_metric_error("record_embedding_insert", e)
 
 
 prometheus_metrics = PrometheusMetrics()

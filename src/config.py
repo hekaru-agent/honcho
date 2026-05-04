@@ -645,8 +645,18 @@ class LLMSettings(HonchoSettings):
 
     # API Keys for LLM providers
     ANTHROPIC_API_KEY: str | None = None
+    ANTHROPIC_BASE_URL: str | None = None
     OPENAI_API_KEY: str | None = None
     GEMINI_API_KEY: str | None = None
+    GROQ_API_KEY: str | None = None
+    OPENAI_COMPATIBLE_BASE_URL: str | None = None
+    OPENAI_COMPATIBLE_EMBEDDING_MODEL: str | None = None  # Override embedding model for openrouter provider
+
+    # Separate vLLM endpoint (for local models)
+    VLLM_API_KEY: str | None = None
+    VLLM_BASE_URL: str | None = None
+
+    EMBEDDING_PROVIDER: Literal["openai", "gemini", "openrouter"] = "openai"
 
     # General LLM settings
     DEFAULT_MAX_TOKENS: Annotated[int, Field(default=1000, gt=0, le=100_000)] = 2500
