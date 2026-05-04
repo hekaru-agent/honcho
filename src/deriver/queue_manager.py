@@ -456,7 +456,6 @@ class QueueManager:
                 count=1,
                 workspace_name=work_unit.workspace_name,
                 task_type=work_unit.task_type,
-                status="error",
             )
 
         if settings.SENTRY.ENABLED:
@@ -827,7 +826,6 @@ class QueueManager:
                     count=len(items),
                     workspace_name=work_unit.workspace_name,
                     task_type=work_unit.task_type,
-                    status="success",
                 )
 
     async def mark_queue_item_as_errored(

@@ -355,13 +355,14 @@ async def process_reconciler(payload: ReconcilerPayload) -> None:
             )
 
             # Record to Prometheus metrics
-            duration_sec = duration_ms / 1000
-            prometheus_metrics.record_message_embeddings_sync(
-                synced=metrics.message_embeddings_synced,
-                failed=metrics.message_embeddings_failed,
-                workspace_name="default",
-                duration_seconds=duration_sec,
-            )
+            # NOTE: record_message_embeddings_sync removed upstream (b65d03d)
+            # duration_sec = duration_ms / 1000
+            # prometheus_metrics.record_message_embeddings_sync(
+            #     synced=metrics.message_embeddings_synced,
+            #     failed=metrics.message_embeddings_failed,
+            #     workspace_name="default",
+            #     duration_seconds=duration_sec,
+            # )
 
     elif reconciler_type == ReconcilerType.CLEANUP_QUEUE:
         logger.debug("Processing cleanup_queue task")
